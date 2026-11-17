@@ -1355,7 +1355,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const p = url.pathname;
   try {
-    if (req.method === "GET" && p === "/health") return sendJson(res, 200, { service: "agent-hub", version: "1.3.0" });
+    if (req.method === "GET" && p === "/health") return sendJson(res, 200, { service: "agent-hub", version: "1.3.1" });
     if (req.method === "GET" && p === "/downloads/acp-bridge.py") {
       if (!fs.existsSync(CLIENT_BRIDGE_PATH)) return sendJson(res, 404, { error: "client bridge is not installed" });
       const source = fs.readFileSync(CLIENT_BRIDGE_PATH);

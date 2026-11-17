@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SOURCE_URL="${AGENT_HUB_SOURCE_URL:-https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.0}"
+SOURCE_URL="${AGENT_HUB_SOURCE_URL:-https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.1}"
 ROOT="${AGENT_HUB_ROOT:-$HOME/.agent-hub/server}"; PUBLIC_URL=""; LISTEN="0.0.0.0"; PORT="8930"; LOCAL_ONLY=0
 usage() { printf '%s\n' 'Agent Hub installer (no paid service required)' 'Usage: install.sh --public-url https://hub.example.com [--listen 0.0.0.0] [--port 8930]' '       install.sh --local-only [--listen 127.0.0.1] [--port 8930]' 'The script does not buy a server, open firewall ports, create a tunnel, or issue TLS.'; }
 while (($#)); do

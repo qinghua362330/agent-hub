@@ -52,7 +52,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.2.0"
+VERSION = "1.3.1"
 AGENT_NAME = "agent-hub-bridge"
 
 TARGET = os.environ.get("WB_BRIDGE_TARGET", "muse").strip() or "muse"
@@ -569,12 +569,18 @@ def selftest():
     model surface: advertise, record a switch, confirm it, reject an unknown
     id, and keep the recorded model across a restart."""
     import shutil
+    import socket
     import subprocess
     import tempfile
 
     here = os.path.dirname(os.path.abspath(__file__))
     stub = os.path.join(here, "tests", "stub-hub.py")
-    stub_port = 18099
+    if not os.path.isfile(stub):
+        print("SELFTEST FAIL: run this check from a source checkout containing tests/stub-hub.py")
+        return 1
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        stub_port = probe.getsockname()[1]
     home = tempfile.mkdtemp(prefix="wb-selftest-")
     env = dict(os.environ)
     env["HOME"] = home  # the recorded model file lands in scratch, never the real home
@@ -585,14 +591,19 @@ def selftest():
         [sys.executable, stub, str(stub_port)],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
+    proc = None
     try:
+        available = False
         for _ in range(50):
+            assert stub_proc.poll() is None, "isolated stub Hub exited before becoming healthy"
             try:
                 import urllib.request
                 urllib.request.urlopen("http://127.0.0.1:%d/health" % stub_port, timeout=1)
+                available = True
                 break
             except Exception:
                 time.sleep(0.1)
+        assert available and stub_proc.poll() is None, "isolated stub Hub did not become healthy"
         proc = subprocess.Popen(
             [sys.executable, os.path.abspath(__file__)],
             env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -730,6 +741,13 @@ def selftest():
         print("SELFTEST FAIL: %s" % exc)
         return 1
     finally:
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
         shutil.rmtree(home, ignore_errors=True)
         stub_proc.terminate()
         try:

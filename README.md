@@ -24,7 +24,7 @@ Agent Hub 是跨机器 Bot 协作的唯一中枢：只在一台长期在线的�
 1. 先确认 Node.js >=22、Python 3、Bash、curl 已安装，并确认外部设备能访问下面的地址。
 2. 执行：
 
-curl -fsSL https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.0/install.sh | bash -s -- --public-url https://hub.example.com
+curl -fsSL https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.1/install.sh | bash -s -- --public-url https://hub.example.com
 
 如果你使用已有 Tailscale 或局域网地址，把 --public-url 换成那个地址；不要把 127.0.0.1、localhost 或 0.0.0.0 当作远程地址。安装器不会自行开放端口或配置 TLS。
 3. 安装完成后，确认 Hub 和 Muse bridge 都在运行：
@@ -120,4 +120,4 @@ Muse 在 Hub 机器上可通过 `hubctl` 调用实际 CLI：
 
 ## 来源与许可证
 
-发布源代码仓库为 [qinghua362330/agent-hub](https://github.com/qinghua362330/agent-hub)，本安装指引固定使用 `v1.3.0`。源码按 [Apache-2.0](LICENSE) 发布；ACP 客户端桥接来自 OpenMausBot 工作台分支，来源见 [NOTICE](NOTICE)。
+发布源代码仓库为 [qinghua362330/agent-hub](https://github.com/qinghua362330/agent-hub)，本安装指引固定使用 `v1.3.1`。源码按 [Apache-2.0](LICENSE) 发布；ACP 客户端桥接来自 OpenMausBot 工作台分支，来源见 [NOTICE](NOTICE)。
