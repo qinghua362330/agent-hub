@@ -1,43 +1,43 @@
 # Agent Hub
 
-Agent Hub 是跨机器 Bot 协作的唯一中枢：只在一台长期在线的远端服务器上运行一个 Hub，其他机器和 Bot 连接到它，不要为每台机器各建一个 Hub。Hub 保存跨 Bot 的会话、任务、租约和心跳，因此 Mac 关机时只会让本机 Codex/Claude Bot 离线，远端 Hub、Muse 和其他仍在线的 Bot 可以继续协作。
+Agent Hub 是跨机器 Bot 协作的共享中枢：由你选择一台机器运行一个 Hub，可以是本机、局域网主机、Tailscale 主机或远端服务器。其他机器上的 Bot 连接同一个 Hub，侧栏可以按机器筛选显示，但聊天和任务仍能跨机器协作。不要为同一个团队重复创建多个 Hub。
 
 这是零新增服务费的部署方式，但需要你已有一台可持续运行的服务器，以及各 Bot 自己已有的模型账号和额度。脚本不会购买服务器、开防火墙端口、创建隧道、代办域名或自动签发 TLS。
 
 ## 运行前提
 
-在作为 Hub 维护者的那台远端机器上准备：
+在作为 Hub 维护者的那台机器上准备：
 
 - Node.js 22 或更高版本；
 - Python 3.9 或更高版本、Bash、curl；适用于 Linux、macOS 或 WSL；
-- 一个其他设备可以访问的地址：已有 HTTPS 反向代理域名、VPS 公网地址、Tailscale 地址或局域网地址。
+- 如果只在本机使用，可用 `--local-only`；如果要让其他机器或手机访问，需要一个它们可访问的地址：已有 HTTPS 反向代理域名、VPS 公网地址、Tailscale 地址或局域网地址。
 
 `--public-url` 是连接资料中的对外地址。HTTPS 需要由你已有的反向代理或隧道终止；这个 Hub 本身提供 HTTP 服务，不应把 `http://` 地址伪装成原生 HTTPS。公网部署应使用反向代理、已有 Tailscale 或其他你信任的网络边界，并自行限制端口和访问范围。
 
-## 发给 Muse 的完整指引
+## 通用部署指引
 
-把下面内容完整发给 Muse，并让它在准备长期在线的远端服务器上执行。把 `https://hub.example.com` 换成该服务器真正可访问的地址：
+把下面内容发给 Muse、Grok 或任何能维护目标机器的 Agent。Hub 主机由团队自己选择；长期在线的远端机器只是推荐方案，不是强制要求。把 `https://hub.example.com` 换成实际地址：
 
 ```text
-请在这台长期在线的远端机器上部署 Agent Hub。它是整个 Bot 团队唯一的 Hub，其他机器不要再创建 Hub。
+请在我指定的这台机器上部署 Agent Hub。它是整个 Bot 团队共用的 Hub；如果团队已经有 Hub，请连接现有 Hub，不要另建第二个。
 
 1. 先确认 Node.js >=22、Python 3、Bash、curl 已安装，并确认外部设备能访问下面的地址。
-2. 执行：
+2. 如果这台机器需要被其他设备访问，执行：
 
 curl -fsSL https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.1/install.sh | bash -s -- --public-url https://hub.example.com
 
-如果你使用已有 Tailscale 或局域网地址，把 --public-url 换成那个地址；不要把 127.0.0.1、localhost 或 0.0.0.0 当作远程地址。安装器不会自行开放端口或配置 TLS。
-3. 安装完成后，确认 Hub 和 Muse bridge 都在运行：
+如果只需要本机使用，执行 `curl -fsSL https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.1/install.sh | bash -s -- --local-only`。如果使用已有 Tailscale 或局域网地址，把 `--public-url` 换成那个地址；不要把 127.0.0.1、localhost 或 0.0.0.0 当作跨机器地址。安装器不会自行开放端口或配置 TLS。
+3. 安装完成后，确认 Hub 和 bridge 都在运行：
 
 ~/.agent-hub/server/hubctl.py status
 
-4. 先不要运行 muse-ready。请把真实 Muse 执行器接到 bridge/inbox：bridge 会轮询任务，把收到的 JSON 放入 inbox；Muse 消费任务后，将结果写入 outbox，bridge 会把结果、当前 claimToken 和续租状态回传 Hub。没有真实消费循环时，必须保持未就绪。
-5. 只有真实执行器已经能消费任务、需要时续租，并写出完成或需用户输入的结果后，才运行：
+4. 把实际 Bot 执行器接到对应的 bridge、webhook 或 MCP 入口。安装器只安装传输层，不会猜测你的模型登录方式，也不会替你运行 Bot。
+5. 只有真实执行器已经能消费任务、需要时续租，并写出完成或需用户输入的结果后，才运行（bridge 类型 Bot）：
 
 ~/.agent-hub/server/hubctl.py muse-ready
 
 这个就绪标记只有 60 秒有效。真实消费循环应每 20 秒刷新一次同一命令；停止消费时运行 hubctl.py muse-not-ready。只运行一次不会永久表示 Muse 可执行。
-6. 将下面命令生成的 JSON 私下交给 OpenMausBot 的“连接服务器 / Agent Hub”入口，不要把 token 发到公开频道：
+6. 将下面命令生成的 JSON 私下交给需要接入的 OpenMausBot 机器，在侧栏 **添加 / 连接 → 连接到服务器 → Agent Hub** 中导入，不要把 token 发到公开频道：
 
 ~/.agent-hub/server/hubctl.py connection
 
@@ -56,9 +56,33 @@ curl -fsSL https://raw.githubusercontent.com/qinghua362330/agent-hub/v1.3.1/inst
 
 它同时写入权限为 0600 的 `~/.agent-hub/server/connection.json`。`token` 只来自 Hub 的 `tokens.mac`，不要写入日志、提交 Git 或粘贴到公开聊天。安装器内部可以使用 `hubctl connection --write-only`，只生成私有文件而不打印 JSON。
 
-在 OpenMausBot 工作台中选择连接服务器 / Agent Hub，导入这份 JSON；工作台会用 `hubUrl` 和 token 访问同一个远端 Hub。Muse、Grok、本机 Codex 和其他成员使用各自的身份与桥接接入同一名册，身份不由它们运行在哪台机器决定。
+在 OpenMausBot 中使用原有侧栏的 **＋ 添加 / 连接**：选择 Muse、Grok 或自定义桥接，导入这份连接信息并完成状态检查。导入后该 Bot 会保留所属机器和身份；从 Muse 的机器列表进入时只过滤显示，Bot 仍可在普通聊天中调用本机 Codex、Grok 和其他机器上的 Bot。总览入口显示全部成员，并提供 `ManusBot · 总协调`。
 
-导入后，进入 **总览协作工作台 → Bot 管理**，为 Codex 选择本机已有的 Bot 并保存绑定，在该 Bot 的工具设置里启用 `agent-hub`。工作台运行、模型已登录且成员心跳为在线并就绪时，Muse 才能把任务交给本机 Codex。其他自建 Bot 可在同一页加入团队。
+## 接入 Muse、Grok 和自建 Bot
+
+### Muse 或其他可运行 bridge 的 Bot
+
+在目标机器安装完成后，bridge 会把 Hub 任务写入 `bridge/inbox/<taskId>.json`。真实执行器读取任务，保留 `taskId`、`claimToken`、`conversationId` 和 `messages`，再将结果原子写入 `bridge/outbox/<taskId>.json`；bridge 会调用 `/bridge/reply` 回传。执行器存活且确实能处理任务时，每 20 秒刷新 `hubctl.py muse-ready`；停止消费时运行 `muse-not-ready`。这套 inbox/outbox 约定适用于 Muse 和能运行本地脚本的其他 Bot。
+
+### Grok Bot
+
+Grok 使用 Hub 的 webhook 适配器。Hub 维护者在 `hub/config.json` 的现有 JSON 中加入 `grokWebhook`（保留 `tokens` 等现有字段），例如：
+
+```json
+{"grokWebhook":{"url":"https://your-grok-connector.example/hub-task","key":"connector-secret"}}
+```
+
+Hub 会把任务以 JSON POST 到 `grokWebhook.url`，请求包含 `taskId`、`conversationId`、`text`、`claimToken` 和最近消息，并带 `Authorization: Bearer <connector-secret>`。Grok 的 Routine 或连接器负责接收该请求、调用 Grok、然后使用 Hub 生成的 `tokens.grok` 作为 Bearer token 回调：
+
+```text
+POST <hub-url>/bridge/grok/reply
+Authorization: Bearer <grok-token>
+Content-Type: application/json
+
+{"taskId":"...","claimToken":"...","state":"COMPLETED","text":"任务结果"}
+```
+
+需要用户确认时，将 `state` 设为 `INPUT_REQUIRED`，并附带 `approval` 对象；失败时使用 `FAILED`。Grok 的 Routine 还应定期 POST `/bridge/heartbeat`，body 为 `{"agentId":"grok","ready":true}`，停止执行则传 `ready:false`。Hub 只把 Grok 标为可执行，直到收到真实心跳和有效回调。连接器实现由 Grok 侧完成；本仓库不假设某个 Grok 产品的 Routine 格式，也不会替它创建账号或 webhook。
 
 ## 地址与常驻设置示例
 
@@ -74,7 +98,7 @@ hub.example.com {
 
 Linux 安装后运行 `~/.agent-hub/server/hubctl.py enable` 启用系统服务；维护者可用 `loginctl enable-linger "$(id -un)"` 允许用户退出后服务继续运行（部分系统需要管理员权限）。用 `systemctl --user status agent-hub.service` 检查服务。服务管理器自身需要可用的用户会话，容器中应使用已有进程管理方式。
 
-## Muse bridge 和出站协作
+## Bridge 和出站协作
 
 安装后 bridge 默认可以轮询 Hub、维护租约和写收件文件，但没有 ready 文件时会上报 `ready=false`，不会把桥进程存活误报成模型已就绪。真实执行器的接入必须由 Muse 按它已有的运行环境完成；没有一个安装脚本可以替所有 Muse 版本、登录方式和模型沙盒自动完成这一步。
 
@@ -84,7 +108,7 @@ Linux 安装后运行 `~/.agent-hub/server/hubctl.py enable` 启用系统服务�
 - `bridge/outbox/<taskId>.json`：Muse 执行器写入的回复，bridge 成功回传后归档到 `bridge/done/`；
 - `bridge/ready`：就绪 TTL 标记，只能由真实消费循环定时刷新。
 
-Muse 在 Hub 机器上可通过 `hubctl` 调用实际 CLI：
+任何能访问 Hub 的执行器都可通过 `hubctl` 调用实际 CLI：
 
 ```sh
 ~/.agent-hub/server/hubctl.py wb members
@@ -114,9 +138,9 @@ Muse 在 Hub 机器上可通过 `hubctl` 调用实际 CLI：
 
 升级会先完整下载和校验新文件，再切换版本；`hub/config.json`、`hub/data/`、inbox/outbox/done、连接文件和日志会保留。新版本无法健康启动时会恢复旧程序并重启旧服务。不要手动删除 `hub/config.json` 或 `hub/data/`，否则会丢失令牌和历史。
 
-## 手机与 Mac 关机
+## 手机与设备离线
 
-手机可以继续使用已经接入 Hub 的 Muse/Grok 入口，其他在线 Bot 也可以继续通过 Hub 协作。OpenMausBot 桌面工作台所在的 Mac 关机后，本机 Bot 会显示离线；Hub 不会因此停止。若要从手机直接打开 OpenMausBot 的工作台界面，需要另行在远端部署 OMB Web 服务；Agent Hub 只提供统一协作中枢和 API。
+Hub 主机如果关机，整个团队暂时无法协作；因此需要手机或远端继续使用时，建议把 Hub 放在长期在线的服务器上。OpenMausBot 所在的 Mac 关机后，只会让本机 Bot 显示离线；Hub 和其他在线 Bot 不受影响。若要从手机直接打开 OpenMausBot 的工作台界面，需要另行部署 OMB Web 服务；Agent Hub 只提供统一协作中枢和 API。
 
 ## 来源与许可证
 
