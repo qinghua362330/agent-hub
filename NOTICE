@@ -1,0 +1,10 @@
+Agent Hub
+Maintained by qinghua362330.
+
+The ACP client bridge was developed as part of the OpenMausBot workbench fork.
+OpenMausBot upstream: https://github.com/milind-soni/OpenMausBot
+Upstream author: Milind Soni. Upstream license: Apache License 2.0.
+
+This distribution contains the standalone coordination service, bridge,
+installer, command-line tools, and isolated tests. It does not bundle
+OpenMausBot or third-party model runtimes.
